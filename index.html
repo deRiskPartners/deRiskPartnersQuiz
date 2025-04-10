@@ -95,7 +95,6 @@
       <img src="de-risk-partners.jpg" alt="de Risk Partners Logo">
     </div>
 
-    <!-- Login Section -->
     <div id="infoSection">
       <h2>Welcome! Please enter your info to begin:</h2>
       <form id="infoForm">
@@ -112,7 +111,6 @@
       </form>
     </div>
 
-    <!-- Quiz Section -->
     <div id="quizSection" class="hidden">
       <form id="quizForm">
         <div class="quiz-question">
@@ -138,7 +136,7 @@
           <label><input type="radio" name="q3" value="4"> Unsure</label>
         </div>
         <div class="quiz-question">
-          <p>4. How would you describe your credit union's last regulatory examination experience??</p>
+          <p>4. How would you describe your credit union's last regulatory examination experience?</p>
           <label><input type="radio" name="q4" value="1"> Smooth with minimal findings</label>
           <label><input type="radio" name="q4" value="2"> Some challenges but manageable</label>
           <label><input type="radio" name="q4" value="3"> Significant findings requiring substantial remediation</label>
@@ -197,25 +195,57 @@
     document.getElementById("quizForm").onsubmit = function(e) {
       e.preventDefault();
       let redFlags = 0;
+      const answers = [];
+
       for (let i = 1; i <= 8; i++) {
         const answer = document.querySelector(`input[name=q${i}]:checked`);
         if (answer) {
           const val = parseInt(answer.value);
+          answers.push(val);
           if (val === 3 || val === 4) redFlags++;
         }
       }
+
       const result = document.getElementById("result");
       let message = " You're in good shape! Visit the de Risk Partners Booth and speak to a Compliance Officer.";
       result.style.backgroundColor = "green";
+      let scoreCategory = "Green";
+
       if (redFlags >= 3) {
         message = " Your credit union may benefit from our professional compliance support. Visit the de Risk Partners Booth and speak to a Compliance Officer.";
         result.style.backgroundColor = "red";
+        scoreCategory = "Red";
       } else if (redFlags > 0) {
         message = " Some areas may need attention. Consider a compliance review. Visit the de Risk Partners Booth and speak to a Compliance Officer.";
         result.style.backgroundColor = "orange";
+        scoreCategory = "Orange";
       }
+
       result.innerHTML = message;
+      submitQuizToSupabase(answers, redFlags, scoreCategory);
     };
+
+    async function submitQuizToSupabase(answers, redFlags, scoreCategory) {
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm");
+      const supabaseUrl = "https://ukdgwyxtpgaprksmgxkh.supabase.co";
+      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrZGd3eXh0cGdhcHJrc21neGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDQ4MjksImV4cCI6MjA1OTg4MDgyOX0.zWvdrbud1mKMZdZGjKmFhBsTEt4tAmkMeClf9A1gwlo";
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { error } = await supabase.from("quiz_responses").insert([{
+        name: attendeeInfo.name,
+        organization: attendeeInfo.organization,
+        email: attendeeInfo.email,
+        quiz_answers: JSON.stringify(answers),
+        red_flags: redFlags,
+        score_category: scoreCategory
+      }]);
+
+      if (error) {
+        console.error("Submission failed:", error);
+      } else {
+        console.log("Submitted to Supabase successfully!");
+      }
+    }
   </script>
 </body>
 </html>
